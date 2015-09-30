@@ -1,0 +1,1 @@
+model["fromJS"] = "Hello World from Java Script!";

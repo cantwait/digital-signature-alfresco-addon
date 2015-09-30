@@ -1,0 +1,8 @@
+<webscript>
+   	<shortname>Verify if the certiface has expired</shortname>
+   	<description>Verify if the certiface has expired</description>
+   	<url>/api/digitalSigning/isCertificateExpired</url>
+   	<format default="">argument</format>
+  	<authentication>user</authentication>
+  	<transaction>required</transaction>
+</webscript>

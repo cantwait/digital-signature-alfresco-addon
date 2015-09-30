@@ -1,0 +1,122 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE beans PUBLIC '-//SPRING//DTD BEAN//EN' 'http://www.springframework.org/dtd/spring-beans.dtd'>
+<!--
+	Licensed to the Apache Software Foundation (ASF) under one or more
+	contributor license agreements.  See the NOTICE file distributed with
+	this work for additional information regarding copyright ownership.
+	The ASF licenses this file to You under the Apache License, Version 2.0
+	(the "License"); you may not use this file except in compliance with
+	the License.  You may obtain a copy of the License at
+	
+	http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+-->
+<beans>
+    
+    <!-- A simple class that is initialized by Spring -->
+    <bean id="org.alfresco.plugin.digitalSigning.exampleBean" class="org.alfresco.plugin.digitalSigning.demoamp.Demo" init-method="init" />
+    
+    <!-- A simple module component that will be executed once -->
+    <bean id="org.alfresco.plugin.digitalSigning.exampleComponent" class="org.alfresco.plugin.digitalSigning.demoamp.DemoComponent" parent="module.baseComponent" >
+        <property name="moduleId" value="${project.artifactId}" />  <!-- See module.properties -->
+        <property name="name" value="exampleComponent" />
+        <property name="description" value="A demonstration component" />
+        <property name="sinceVersion" value="2.0" />
+        <property name="appliesFromVersion" value="2.0" />
+        <property name="nodeService" ref="NodeService" />
+        <property name="nodeLocatorService" ref="nodeLocatorService" />
+    </bean>
+    
+    <!-- Sign service javaScript API -->
+  	<bean id="digitalSigningScript" parent="baseJavaScriptExtension"
+		class="org.alfresco.plugin.digitalSigning.script.SigningServiceScript">
+		<property name="extensionName">
+			<value>digitalSigning</value>
+		</property>
+		<property name="digitalSigningService">
+			<ref bean="digitalSigningService" />
+		</property>
+		<property name="authenticationService" ref="authenticationService" />
+		<property name="personService" ref="personService" />
+		<property name="nodeService" ref="nodeService" />
+	</bean>
+    
+    	<!-- Signing service -->
+	<bean id="digitalSigningService" class="org.alfresco.plugin.digitalSigning.service.SigningService">
+		<property name="nodeService" ref="nodeService" />
+		<property name="dictionaryService" ref="dictionaryService" />
+		<property name="contentService" ref="contentService" />
+		<property name="fileFolderService" ref="fileFolderService" />
+		<property name="contentTransformerRegistry" ref="contentTransformerRegistry" />
+		<property name="metadataEncryptor" ref="metadataEncryptor" />
+	</bean>
+	
+	<!-- Digital Signing action -->
+	<bean id="digitalSigning-action" class="org.alfresco.plugin.digitalSigning.action.SigningActionExecuter" parent="action-executer">
+    	<property name="digitalSigningService" ref="digitalSigningService" />
+    	<property name="authenticationService" ref="authenticationService" />
+		<property name="personService" ref="personService" />
+		<property name="nodeService" ref="nodeService" />
+  	</bean>
+  	
+  		<!-- Certificate alert process definition -->
+	<bean id="certificateAlert" class="org.alfresco.plugin.digitalSigning.scheduledAction.CertificateAlert">
+		<property name="retryingTransactionHelper">
+            <ref bean="retryingTransactionHelper"/>
+        </property>
+        <property name="nodeService">
+			<ref bean="nodeService" />
+		</property>
+		<property name="personService">
+			<ref bean="personService" />
+		</property>
+		<property name="actionService">
+			<ref bean="actionService" />
+		</property>
+		<property name="fromEmail">
+			<value>${mail.from.default}</value>
+		</property>
+		<property name="templateService">
+			<ref bean="templateService" />
+		</property>
+		<property name="tenantService">
+            <ref bean="tenantService"></ref>
+        </property>
+        <property name="preferenceService">
+            <ref bean="preferenceService"></ref>
+        </property>
+	</bean>
+	
+	<!-- Alert on certificate expiration job definition -->
+	<bean id="certificateAlertJobDetail" class="org.springframework.scheduling.quartz.JobDetailBean">
+		<property name="jobClass">
+			<value>org.alfresco.plugin.digitalSigning.scheduledAction.CertificateAlertJob</value>
+		</property>
+		<property name="jobDataAsMap">
+			<map>
+				<entry key="certificateAlert">
+					<ref bean="certificateAlert" />
+				</entry>
+			</map>
+		</property>
+	</bean>
+
+	<!-- Alert on certificate expiration trigger definition -->
+	<bean id="certificateAlertTrigger" class="org.alfresco.util.CronTriggerBean">
+		<property name="jobDetail">
+			<ref bean="certificateAlertJobDetail" />
+		</property>
+		<property name="scheduler">
+			<ref bean="schedulerFactory" />
+		</property>
+		<property name="cronExpression">
+			<value>${digitalSigning.alert.cron}</value>
+		</property>
+	</bean>
+    
+</beans>
